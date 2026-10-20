@@ -1,0 +1,99 @@
+﻿<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analitzador de Rangs de Pòquer 🎴</title>
+<link rel="stylesheet" href="/static/CSS/styles.css?v=3">
+</head>
+<body>
+<div class="topbar">
+  <button type="button" class="theme-toggle" id="btnTheme" title="Canvia al tema clar">☀️ Tema clar</button>
+</div>
+
+<div class="layout">
+  <!-- Columna esquerra: inputs (Rang + Board en fila horitzontal) -->
+  <div>
+    <div class="inputs-row">
+      <div class="panel">
+        <h2>Rang del RIVAL (graella 13×13)</h2>
+        <div class="preset-row">
+          <div class="presets" id="presetBar"></div>
+          <button id="btnEditPresets" title="Editar seleccions predeterminades">✏️ Editar presets</button>
+        </div>
+        <div class="grid" id="rangeGrid"></div>
+        <div class="legend">
+          <span><i class="lg-pair"></i>Parells</span>
+          <span><i class="lg-suited"></i>Suited</span>
+          <span><i class="lg-offsuit"></i>Offsuit</span>
+        </div>
+        <div class="counter">Combos seleccionats: <b id="selCount">0</b> · Cel·les: <b id="selCells">0</b></div>
+        <div class="btnrow">
+          <button class="secondary" id="btnClearRange">Netejar selecció</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Board (cartes comunitàries)</h2>
+        <div class="tabs">
+          <div class="tab active" data-street="flop">Flop (3)</div>
+          <div class="tab" data-street="turn">Turn (4)</div>
+          <div class="tab" data-street="river">River (5)</div>
+        </div>
+        <div class="slots" id="boardSlots"></div>
+        <input type="text" id="boardText" placeholder="Input manual: Ah Qd 5c">
+        <div class="btnrow">
+          <button class="secondary" id="btnClearBoard">Netejar board</button>
+          <button class="action" id="btnAnalyze">⚡ Analitzar rang</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna dreta: resultats -->
+  <div>
+    <div class="panel" id="resultsPanel">
+      <h2>Panell de Resultats</h2>
+      <div id="resultsBody"><div class="empty">Selecciona un rang i un board, i prem <b>Analitzar</b>.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal selector de cartes per al board -->
+<div class="modal-overlay" id="cardModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cardModalTitle">
+    <div class="modal-head">
+      <h3 id="cardModalTitle">Tria una carta</h3>
+      <button class="modal-close" id="btnCardCancel" title="Tancar">×</button>
+    </div>
+    <p class="modal-sub" id="cardModalSub"></p>
+    <div class="card-grid" id="cardGrid"></div>
+    <div class="modal-foot">
+      <button class="secondary" id="btnCardClearSlot">Netejar aquesta slot</button>
+      <button class="action" id="btnCardClose">Fet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editor de presets -->
+<div class="modal-overlay" id="presetModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="presetModalTitle" style="max-width:640px">
+    <div class="modal-head">
+      <h3 id="presetModalTitle">Editar seleccions predeterminades</h3>
+      <button class="modal-close" id="btnPresetCancel" title="Tancar">×</button>
+    </div>
+    <p class="modal-sub">Modifica el nom i el rang (notació estàndard: «AA+, Q9o+, A9s+, AKs, QQ…»). Sense «+» s'activa només aquella casella; amb «+» es puja la segona carta (Q9o+ → Q9o, QTo, QJo). Els canvis es desen al navegador (localStorage) i s'apliquen en prémer «Desar».</p>
+    <div class="preset-list" id="presetList"></div>
+    <div class="btnrow">
+      <button class="secondary" id="btnAddPreset">➕ Afegir preset</button>
+      <button class="secondary" id="btnRestorePresets">Restaurar valors per defecte</button>
+    </div>
+    <div class="modal-foot">
+      <button class="action" id="btnSavePresets">💾 Desar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/JS/app.js?v=3"></script>
+</body>
+</html>
