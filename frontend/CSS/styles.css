@@ -1,4 +1,4 @@
-/* ---------- Tema fosc (per defecte) ---------- */
+/* ---------- Dark theme (default) ---------- */
 :root{
   --primary:#6d4aff; --bg:#1a1a2e; --card:#16213e; --text:#eeeeee;
   --success:#22c55e; --danger:#ef4444; --muted:#8b93b8; --border:#2a3a5c;
@@ -12,7 +12,7 @@
   --suit-s:#dbe4ff; --suit-d:#ff8f5e;
 }
 
-/* ---------- Tema clar ---------- */
+/* ---------- Light theme ---------- */
 body.light{
   --primary:#3858D8; --bg:#f5f7f8; --card:#ffffff; --text:#0F172A;
   --success:#16a34a; --danger:#dc2626; --muted:#5b6577; --border:#d7dde5;
@@ -41,7 +41,7 @@ h1{font-size:1.6rem;margin-bottom:4px}
 @media(max-width:760px){.inputs-row{grid-template-columns:1fr}}
 .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
 .panel h2{font-size:1.05rem;margin-bottom:10px;color:var(--primary)}
-/* Graella 13x13 */
+/* 13x13 grid */
 .grid{display:grid;grid-template-columns:repeat(13,1fr);gap:2px}
 .cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;
   font-size:clamp(7px,1.1vw,11px);cursor:pointer;border-radius:4px;user-select:none;
@@ -56,7 +56,7 @@ h1{font-size:1.6rem;margin-bottom:4px}
 input[type=text],textarea{width:100%;background:var(--input);border:1px solid var(--border);color:var(--text);
   border-radius:8px;padding:8px 10px;font-size:.9rem;margin-top:8px}
 input:focus,textarea:focus{outline:none;border-color:var(--primary)}
-/* Tabs board */
+/* Board tabs */
 .tabs{display:flex;gap:6px;margin-bottom:12px}
 .tab{padding:7px 18px;border-radius:8px;background:var(--input);border:1px solid var(--border);
   cursor:pointer;color:var(--muted);font-size:.9rem;transition:all .15s}
@@ -77,7 +77,7 @@ button.action:hover{filter:brightness(1.15)}
 button.secondary{background:var(--input);color:var(--muted);border:1px solid var(--border);border-radius:8px;
   padding:10px 16px;cursor:pointer}
 button.secondary:hover{color:var(--text);border-color:var(--primary)}
-/* Resultats */
+/* Results */
 .stats-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .stat{background:var(--input);border:1px solid var(--border);border-radius:10px;padding:10px 16px;min-width:120px}
 .stat b{font-size:1.3rem;display:block}
@@ -102,16 +102,16 @@ td{padding:6px 8px;border-bottom:1px solid var(--row-border)}
 .legend i.lg-pair{background:var(--cell-pair)}
 .legend i.lg-suited{background:var(--cell-suited)}
 .legend i.lg-offsuit{background:var(--cell-offsuit)}
-/* Presets de rang */
+/* Range presets */
 .presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .chip{background:var(--input);border:1px solid var(--border);color:var(--muted);border-radius:999px;
   padding:5px 12px;font-size:.78rem;cursor:pointer;transition:all .15s;user-select:none}
 .chip:hover{color:var(--text);border-color:var(--primary)}
 .chip.active{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:600}
 .chip.custom{border-style:dashed}
-.chip.neteja{border-color:var(--danger);color:var(--danger)}
-.chip.neteja:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
-.chip.neteja.active{background:var(--danger);color:#fff;border-color:var(--danger)}
+.chip.clear{border-color:var(--danger);color:var(--danger)}
+.chip.clear:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+.chip.clear.active{background:var(--danger);color:#fff;border-color:var(--danger)}
 .preset-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 #btnEditPresets{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;
   padding:4px 10px;font-size:.75rem;cursor:pointer}
@@ -127,7 +127,7 @@ button.danger-ghost{background:none;border:1px solid var(--danger);color:var(--d
   padding:6px 12px;font-size:.8rem;cursor:pointer}
 button.danger-ghost:hover{background:var(--danger);color:#fff}
 .empty{color:var(--muted);font-size:.9rem;padding:24px;text-align:center}
-/* Modal selector de cartes */
+/* Card picker modal */
 .modal-overlay{position:fixed;inset:0;background:var(--overlay);backdrop-filter:blur(3px);
   display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
 .modal-overlay.open{display:flex}

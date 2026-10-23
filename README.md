@@ -1,84 +1,100 @@
-# Analitzador de Rangs i Probabilitats de Pòquer
+# Poker Range Analyzer
 
-Aplicació web **local** per analitzar la força del **rang del rival** contra un board
-determinat (flop, turn o river). No cal introduir cap mà pròpia: l'eina desglossa el
-percentatge de combos del rang rival que pertanyen a cada categoria de mà (Quads, Full
-House, Color, Escala, Trips, Two Pair, Top Pair, Mid Pair, Overpair, As Alt, etc.) així
-com els projectes pendents (Flush Draw, OESD, Gutshot, Backdoor FD/SD).
+A **local** web app to analyze the strength of the **opponent's range** against a given
+board (flop, turn or river). There is no need to enter your own hand: the tool breaks down
+the percentage of combos in the opponent's range that belong to each hand category (Quads,
+Full House, Flush, Straight, Trips, Two Pair, Top Pair, Mid Pair, Overpair, Ace High, etc.)
+as well as the pending draws (Flush Draw, OESD, Gutshot, Backdoor FD/SD).
 
-> Inspirat en Flopzilla. Tot el càlcul es fa **localment** (Python + `treys`), sense
-> serveis externs ni telemetria.
-
----
-
-## Característiques
-
-- **Selector visual de rang 13x13**: diagonal = parells, triangle superior = suited,
-  triangle inferior = offsuit. Cel·les clicables (o arrossegables per pintar un bloc)
-  amb comptador de combos en temps real.
-- **Presets editables**: rangs predefinits (Top 10 %, Parelles, Totes suited...) que es
-  desen al navegador (`localStorage`), més un preset **Neteja** que buida la selecció.
-- **Board interactiu**: pestanyes Flop / Turn / River, slots gràfics i un selector emergent
-  amb les 52 cartes (les ja usades apareixen deshabilitades).
-- **Resultats detallats**: total de combos vàlids, combos exclosos per duplicats amb el
-  board, taula de freqüències amb barres i desglossaments de One Pair, High Card i draws.
-- **Integritat del rang**: s'exclouen automàticament els combos que contenen cartes del
-  board i es mostra un avís amb el nombre exacte descartat.
-- **Tema clar / fosc**: botó a la capçalera per canviar de tema; la preferència es desa
-  al navegador (`localStorage`). Paleta clara: fons `#f5f7f8`, text `#0F172A` i color
-  principal `#3858D8`.
+> Inspired by Flopzilla. All computation is done **locally** (Python + `treys`), with no
+> external services or telemetry.
 
 ---
 
-## Stack tecnològic
+## Table of Contents
 
-| Capa | Tecnologia | Notes |
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Running](#running)
+- [Using the Interface](#using-the-interface)
+- [API](#api)
+- [Engine Logic](#engine-logic)
+- [Validation](#validation)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+
+---
+
+## Features
+
+- **Visual 13x13 range selector**: diagonal = pairs, upper triangle = suited, lower
+  triangle = offsuit. Clickable (or draggable to paint a block) cells with a real-time
+  combo counter.
+- **Editable presets**: predefined ranges (Top 10 %, Pairs, All suited...) saved in the
+  browser (`localStorage`), plus a **Clear** preset that empties the selection.
+- **Interactive board**: Flop / Turn / River tabs, graphic slots and a modal picker with
+  all 52 cards (already used ones appear disabled).
+- **Detailed results**: total valid combos, combos excluded for duplicates with the board,
+  frequency table with bars, and One Pair, High Card and draw breakdowns.
+- **Range integrity**: combos containing board cards are automatically excluded and a
+  warning shows the exact discarded count.
+- **Light / dark theme**: header button to switch themes; the preference is saved in the
+  browser (`localStorage`). Light palette: background `#f5f7f8`, text `#0F172A` and
+  primary color `#3858D8`.
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Notes |
 |---|---|---|
-| Backend | FastAPI + Uvicorn | API REST asíncrona |
-| Frontend | HTML5 + Vanilla JS + CSS | Sense frameworks |
-| Avaluació de mans | `treys` | Avaluador oficial de 5 cartes |
-| Validació | Pydantic | Models de petició/resposta |
-| Llenguatge | Python 3.10+ | Tipat estàtic |
+| Backend | FastAPI + Uvicorn | Asynchronous REST API |
+| Frontend | HTML5 + Vanilla JS + CSS | No frameworks |
+| Hand evaluation | `treys` | Official 5-card evaluator |
+| Validation | Pydantic | Request/response models |
+| Language | Python 3.10+ | Static typing |
 
-Dependències (`requirements.txt`): `fastapi`, `uvicorn`, `treys`, `pydantic`.
+Dependencies (`requirements.txt`): `fastapi`, `uvicorn`, `treys`, `pydantic`.
 
 ---
 
-## Estructura del projecte
+## Project Structure
 
 ```
 poker-range-analyzer/
 ├── README.md
 ├── requirements.txt
-├── run.py                  # punt d'entrada (llança Uvicorn)
+├── run.py                  # entry point (starts Uvicorn)
 ├── backend/
 │   ├── __init__.py
-│   ├── main.py             # aplicació FastAPI (rutes /, /api/grid, /api/analyze)
-│   ├── models.py           # models Pydantic (petició/resposta)
-│   ├── range_parser.py     # parser de rangs (graella 13x13 + notació "AA+", "AKs+"...)
-│   └── range_analyzer.py   # motor d'anàlisi amb treys (classificació i % de combos)
+│   ├── main.py             # FastAPI app (routes /, /api/grid, /api/analyze)
+│   ├── models.py           # Pydantic models (request/response)
+│   ├── range_parser.py     # range parser (13x13 grid + "AA+", "AKs+" notation...)
+│   └── range_analyzer.py   # analysis engine with treys (classification and combo %)
 └── frontend/
-    ├── index.html          # estructura de la interfície (HTML5, tema fosc)
+    ├── index.html          # interface structure (HTML5, dark theme)
     ├── CSS/
-    │   └── styles.css      # tots els estils CSS
+    │   └── styles.css      # all CSS styles
     └── JS/
-        └── app.js          # tota la lògica de la interfície (Vanilla JS)
+        └── app.js          # all interface logic (Vanilla JS)
 ```
 
 ---
 
-## Instal·lació
+## Installation
 
-Comprova que tens Python 3.10 o superior:
+Make sure you have Python 3.10 or higher:
 
 ```bash
 python --version      # Windows
 python3 --version     # Linux / macOS
 ```
 
-### Opció A - Entorn virtual (recomanada)
+### Option A - Virtual environment (recommended)
 
-Aïlla les dependències de la resta de projectes del sistema.
+Isolates the dependencies from the rest of the system projects.
 
 **Linux / macOS**
 
@@ -98,13 +114,13 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Si PowerShell bloqueja l'activació per la *execution policy*, executa-ho un cop:
+If PowerShell blocks activation due to the *execution policy*, run this once:
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser ExecutionPolicy RemoteSigned
 ```
 
-### Opció B - Instal·lació global (sense venv)
+### Option B - Global installation (no venv)
 
 ```bash
 python -m pip install --upgrade pip
@@ -113,84 +129,83 @@ python -m pip install -r requirements.txt
 
 ---
 
-## Execució
+## Running
 
-Des de l'arrel del projecte:
+From the project root:
 
 ```bash
 python run.py
 ```
 
-Uvicorn s'engega amb recàrrega automàtica a:
+Uvicorn starts with auto-reload at:
 
 ```
 http://127.0.0.1:8000
 ```
 
-Obre aquesta URL al navegador. Documentació interactiva de l'API: `http://127.0.0.1:8000/docs`.
+Open that URL in your browser. Interactive API documentation: `http://127.0.0.1:8000/docs`.
 
-### Canviar el port
+### Changing the Port
 
-Pots executar l'aplicació en un altre port de tres maneres:
+You can run the app on another port in three ways:
 
 ```bash
-python run.py --port 8080            # argument de línia d'ordres
+python run.py --port 8080            # command-line argument
 ```
 
 ```powershell
-$env:PORT = 8080; python run.py      # variable d'entorn (PowerShell)
+$env:PORT = 8080; python run.py      # environment variable (PowerShell)
 ```
 
 ```bash
-PORT=8080 python run.py              # variable d'entorn (Linux / macOS)
+PORT=8080 python run.py              # environment variable (Linux / macOS)
 ```
 
-També pots canviar l'adreça d'escolta i desactivar la recàrrega automàtica:
+You can also change the bind address and disable auto-reload:
 
 ```bash
 python run.py --host 0.0.0.0 --port 8080 --no-reload
 ```
 
-Alternativa manual (sense `run.py`):
+Manual alternative (without `run.py`):
 
 ```bash
 uvicorn backend.main:app --host 127.0.0.1 --port 8080 --reload
 ```
 
-Per aturar el servidor: `Ctrl+C`.
+To stop the server: `Ctrl+C`.
 
 ---
 
-## Ús de la interfície
+## Using the Interface
 
-1. **Rang del rival**: fes clic a les cel·les de la graella **13x13** per activar o
-   desactivar combos, o **clic i arrossega** per pintar diverses caselles alhora (si la
-   primera casella ja estava seleccionada, l'arrossegament les deselecciona). També pots
-   aplicar un **preset** de la barra superior. El preset **Neteja** (en vermell) buida el
-   tauler i deixa el rang sense seleccions.
-2. **Board**: fes clic a una slot per obrir el selector de les 52 cartes, o escriu el board
-   manualment amb notació `Ah Qd 5c` (`s`=espases, `h`=cors, `d`=diamants, `c`=trèvols,
-   `T`=10). Canvia el carrer amb les pestanyes Flop / Turn / River.
-3. Prem **Analitzar rang** i consulta el panell de resultats.
-4. Usa el botó **☀️ Tema clar / 🌙 Tema fosc** de la capçalera per canviar de tema; la
-   preferència es desa automàticament al navegador.
+1. **Opponent range**: click the cells of the **13x13** grid to enable or disable combos,
+   or **click and drag** to paint several cells at once (if the first cell was already
+   selected, the drag deselects them). You can also apply a **preset** from the top bar.
+   The **Clear** preset (in red) empties the grid and leaves the range with no selections.
+2. **Board**: click a slot to open the 52-card picker, or type the board manually with
+   `Ah Qd 5c` notation (`s`=spades, `h`=hearts, `d`=diamonds, `c`=clubs, `T`=10). Switch
+   streets with the Flop / Turn / River tabs.
+3. Press **Analyze range** and check the results panel.
+4. Use the **☀️ Light theme / 🌙 Dark theme** button in the header to switch themes; the
+   preference is saved automatically in the browser.
 
 ---
 
 ## API
 
 ### `GET /`
-Serveix el frontend (`frontend/index.html`).
+Serves the frontend (`frontend/index.html`).
 
 ### `GET /static/*`
-Serveix els fitxers estàtics del frontend (`CSS/styles.css`, `JS/app.js`).
+Serves the frontend static files (`CSS/styles.css`, `JS/app.js`).
 
 ### `GET /api/grid`
-Retorna les etiquetes de la graella 13x13.
+Returns the 13x13 grid labels.
 
 ### `POST /api/analyze`
 
-Cos de la petició:
+Request body:
 
 ```json
 {
@@ -201,12 +216,12 @@ Cos de la petició:
 }
 ```
 
-- `range_codes`: llista de codis seleccionats a la graella (opcional).
-- `range_string`: rang en text amb expansions `+` (opcional); es combinen les dues fonts.
-- `board`: cartes del board en notació `Ah`, `Td`, `9c`...
-- `street`: `"flop"` (3 cartes) | `"turn"` (4) | `"river"` (5).
+- `range_codes`: list of codes selected on the grid (optional).
+- `range_string`: text range with `+` expansions (optional); both sources are combined.
+- `board`: board cards in `Ah`, `Td`, `9c`... notation.
+- `street`: `"flop"` (3 cards) | `"turn"` (4) | `"river"` (5).
 
-Exemple amb `curl`:
+Example with `curl`:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/analyze \
@@ -214,7 +229,7 @@ curl -X POST http://127.0.0.1:8000/api/analyze \
   -d '{"range_string":"AKs","board":["2h","7h","Jh"],"street":"flop"}'
 ```
 
-Resposta (extret):
+Response (excerpt):
 
 ```json
 {
@@ -222,66 +237,66 @@ Resposta (extret):
   "excluded_dupes": 0,
   "valid_combos": 4,
   "categories": [
-    {"key": "FLUSH", "label": "Flush (Color)", "combos": 1, "pct": 25.0},
-    {"key": "HIGH",  "label": "High Card (Carta Alta)", "combos": 3, "pct": 75.0}
+    {"key": "FLUSH", "label": "Flush", "combos": 1, "pct": 25.0},
+    {"key": "HIGH",  "label": "High Card", "combos": 3, "pct": 75.0}
   ],
   "high_card_breakdown": [
-    {"key": "ACE", "label": "As Alt (Ace High)", "combos": 3, "pct": 75.0}
+    {"key": "ACE", "label": "Ace High", "combos": 3, "pct": 75.0}
   ]
 }
 ```
 
 ---
 
-## Lògica del motor
+## Engine Logic
 
-- **Baralla i duplicats**: qualsevol combo que contingui una carta present al board es
-  descarta i es compta a `excluded_dupes` (es mostra un avís al frontend).
-- **Avaluació**: cada combo es combina amb el board i se n'avalua la millor mà de 5 cartes
-  amb `treys` (5 cartes al flop, 6 al turn, 7 al river).
-- **Parelles (Top/Mid/Bottom/Overpair)**: es comparen els rangs del forat amb els rangs
-  únics del board ordenats de més alt a més baix. *Overpair* = butxaca per sobre de tot el
-  board; *Top/Second/Third/Bottom Pair* segons la posició del rang del board emparellat.
-- **Trips reals**: es corregeix la classificació verificant la freqüència real del rang
-  (>= 3 cartes), evitant falsos positius de la heurística.
-- **Color**: només es classifica com a *Flush* si es completa; en cas contrari, *Flush Draw*
-  (4 del mateix pal) o *Backdoor Flush Draw* (3 al flop).
-- **Expansions `+`**: en un preset, un token **sense `+`** activa només aquella casella
-  (`AKs` -> `AKs`; `AK` -> `AKs` i `AKo`). Amb `+`, es manté la carta alta i es puja la
-  segona fins just per sota: `Q9o+` -> `Q9o, QTo, QJo`; `A9s+` -> `A9s, ATs, AJs, AQs,
-  AKs`; `AKs+` -> `AKs`. Per a parells, `AA+` -> `AA..TT` (30 combos) i `99+` -> `99..22`.
-
----
-
-## Validació
-
-Escenaris de referència (comportament verificat del motor):
-
-1. **Duplicats rang-board**: board `Ah Kh 5c` + rang `AA, AKs` -> 10 combos, 4 exclosos,
-   6 vàlids, amb l'avís corresponent.
-2. **Board monocromàtic**: rang `AKs` + board `2h 7h Jh` -> 25 % Flush (`AhKh`) i 75 %
-   High Card (As Alt).
-3. **Jerarquia de parelles**: rang `AA, KQo, 22` + board `Ks 8d 3c` -> Overpair, Top Pair
-   i Bottom/Low Pair correctament separats.
-4. **Expansions `+`**: `AA+` -> 30 combos; `Q9o+` -> `Q9o, QTo, QJo`; `A9s+` ->
-   `A9s, ATs, AJs, AQs, AKs`; `AKs` (sense `+`) -> només `AKs`.
-5. **Progressió de carrers**: rang `JTs` + board `9c 8d 7h` -> 100 % Escala a flop, turn
-   (afegint `6s`) i river (afegint `5d`).
+- **Deck and duplicates**: any combo containing a card present on the board is discarded
+  and counted in `excluded_dupes` (a warning is shown in the frontend).
+- **Evaluation**: each combo is combined with the board and its best 5-card hand is
+  evaluated with `treys` (5 cards on the flop, 6 on the turn, 7 on the river).
+- **Pairs (Top/Mid/Bottom/Overpair)**: hole-card ranks are compared with the board's unique
+  ranks sorted from highest to lowest. *Overpair* = pocket pair above the entire board;
+  *Top/Second/Third/Bottom Pair* according to the position of the paired board rank.
+- **Real trips**: the classification is corrected by checking the actual rank frequency
+  (>= 3 cards), avoiding heuristic false positives.
+- **Flush**: it is only classified as a *Flush* when completed; otherwise *Flush Draw*
+  (4 of the same suit) or *Backdoor Flush Draw* (3 on the flop).
+- **`+` expansions**: in a preset, a token **without `+`** enables only that cell
+  (`AKs` -> `AKs`; `AK` -> `AKs` and `AKo`). With `+`, the high card is kept and the second
+  card is raised up to just below it: `Q9o+` -> `Q9o, QTo, QJo`; `A9s+` -> `A9s, ATs, AJs,
+  AQs, AKs`; `AKs+` -> `AKs`. For pairs, `AA+` -> `AA..TT` (30 combos) and `99+` -> `99..22`.
 
 ---
 
-## Problemes freqüents
+## Validation
 
-| Problema | Solució |
+Reference scenarios (verified engine behavior):
+
+1. **Range-board duplicates**: board `Ah Kh 5c` + range `AA, AKs` -> 10 combos, 4 excluded,
+   6 valid, with the corresponding warning.
+2. **Monochromatic board**: range `AKs` + board `2h 7h Jh` -> 25 % Flush (`AhKh`) and 75 %
+   High Card (Ace High).
+3. **Pair hierarchy**: range `AA, KQo, 22` + board `Ks 8d 3c` -> Overpair, Top Pair and
+   Bottom/Low Pair correctly separated.
+4. **`+` expansions**: `AA+` -> 30 combos; `Q9o+` -> `Q9o, QTo, QJo`; `A9s+` ->
+   `A9s, ATs, AJs, AQs, AKs`; `AKs` (without `+`) -> only `AKs`.
+5. **Street progression**: range `JTs` + board `9c 8d 7h` -> 100 % Straight on the flop,
+   turn (adding `6s`) and river (adding `5d`).
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
 |---|---|
-| `ModuleNotFoundError: No module named 'fastapi'` | No has instal·lat les dependències o no has activat el venv: `pip install -r requirements.txt` |
-| `Address already in use` al port 8000 | Canvia el port amb `python run.py --port 8080` (o la variable `PORT`) |
-| Error 400 "cartes duplicades al board" | Revisa la sintaxi del board (format `Ah Td 9c`, sense repetir cartes) |
-| Error 400 "El carrer X requereix N cartes" | El nombre de cartes del board ha de coincidir amb el carrer seleccionat |
-| El navegador no carrega la pàgina | Assegura't que el servidor és actiu i obre `http://127.0.0.1:8000` |
+| `ModuleNotFoundError: No module named 'fastapi'` | You have not installed the dependencies or activated the venv: `pip install -r requirements.txt` |
+| `Address already in use` on port 8000 | Change the port with `python run.py --port 8080` (or the `PORT` variable) |
+| 400 error "Duplicate cards on the board" | Check the board syntax (format `Ah Td 9c`, without repeating cards) |
+| 400 error "The 'X' street requires N board cards" | The number of board cards must match the selected street |
+| The browser does not load the page | Make sure the server is running and open `http://127.0.0.1:8000` |
 
 ---
 
-## Llicència
+## License
 
-Ús personal i educatiu. Projecte autònom, sense serveis externs ni telemetria.
+Personal and educational use. Standalone project, with no external services or telemetry.

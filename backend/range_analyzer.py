@@ -1,15 +1,16 @@
-"""Motor d'anàlisi de rangs: classifica cada combo del rival contra el board.
+"""Range analysis engine: classifies every opponent combo against the board.
 
-Classificació (jerarquia treys + subcategories estil Flopzilla):
-  - S'avalua la millor mà de 5 cartes sobre les 5-7 cartes (forat + board) amb
-    l'avaluador oficial `treys`.
-  - One Pair es desglossa comparant el rang de la parella amb els rangs únics del
-    board (ordenats de més alt a més baix):
-      * Overpair: parella de butxaca per sobre de tot el board.
-      * Top/Second/Third/Bottom (Fourth/Fifth) Pair: posició del rang del board
-        emparellat dins d'aquesta ordenació.
-  - High Card es desglossa en "As Alt" (l'As juga com a carta alta) i altres.
-  - Projectes (només flop/turn): Flush Draw, OESD, Gutshot, Backdoor FD/SD.
+Classification (treys hierarchy + Flopzilla-style subcategories):
+  - The best 5-card hand over the 5-7 cards (hole + board) is evaluated with
+    the official `treys` evaluator.
+  - One Pair is broken down by comparing the pair rank with the board's unique
+    ranks (sorted from highest to lowest):
+      * Overpair: pocket pair above the entire board.
+      * Top/Second/Third/Bottom (Fourth/Fifth) Pair: position of the paired
+        board rank within that ordering.
+  - High Card is broken down into "Ace High" (the ace plays as the high card)
+    and others.
+  - Draws (flop/turn only): Flush Draw, OESD, Gutshot, Backdoor FD/SD.
 """
 from typing import List, Tuple, Dict, Set
 from collections import Counter
@@ -21,20 +22,20 @@ _evaluator = Evaluator()
 RANKS_ORDER = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
 RANK_VALUE = {r: i for i, r in enumerate(RANKS_ORDER)}  # 2->0 ... A->12
 
-# Classes de treys (get_rank_class):
+# treys classes (get_rank_class):
 # 0=Royal, 1=Straight Flush, 2=Quads, 3=Full House, 4=Flush, 5=Straight,
 # 6=Trips, 7=Two Pair, 8=One Pair, 9=High Card.
 CAT_NAMES = {
     0: ("SF", "Royal Flush / Straight Flush"),
     1: ("SF", "Royal Flush / Straight Flush"),
-    2: ("QUADS", "Quads (Poker)"),
+    2: ("QUADS", "Quads (Four of a Kind)"),
     3: ("FH", "Full House"),
-    4: ("FLUSH", "Flush (Color)"),
-    5: ("STRAIGHT", "Straight (Escala)"),
+    4: ("FLUSH", "Flush"),
+    5: ("STRAIGHT", "Straight"),
     6: ("TRIPS", "Trips (Three of a Kind)"),
-    7: ("TWOPAIR", "Two Pair (Doble Parella)"),
-    8: ("PAIR", "One Pair (Una Parella)"),
-    9: ("HIGH", "High Card (Carta Alta)"),
+    7: ("TWOPAIR", "Two Pair"),
+    8: ("PAIR", "One Pair"),
+    9: ("HIGH", "High Card"),
 }
 CATEGORY_ORDER = ["SF", "QUADS", "FH", "FLUSH", "STRAIGHT", "TRIPS", "TWOPAIR",
                   "PAIR", "HIGH"]
@@ -68,30 +69,30 @@ def _suit(card: str) -> str:
 
 
 def get_available_deck(board_cards: List[str]) -> List[str]:
-    """Baralla restant excloent les cartes del board."""
+    """Remaining deck, excluding the board cards."""
     all_cards = [Card.new(r + s) for r in "AKQJT98765432" for s in "shdc"]
     bs = {Card.new(c) for c in board_cards}
     return [c for c in all_cards if c not in bs]
 
 
 def evaluate_best(cards: List[str]) -> int:
-    """Millor mà de 5 cartes sobre qualsevol combinació (flop/turn/river)."""
+    """Best 5-card hand over any combination (flop/turn/river)."""
     n = len(cards)
     if n == 5:
         return _evaluator.evaluate(cards[:2], cards[2:])
     if n < 5:
-        return 9_999_999  # valor sintètic (pitjor que qualsevol mà real)
+        return 9_999_999  # synthetic value (worse than any real hand)
     return min(_evaluator.evaluate(list(c[:2]), list(c[2:]))
                for c in combinations(cards, 5))
 
 
 def classify_pair_subtype(hole: Tuple[str, str], board: List[str]) -> str:
-    """Subcategoria de One Pair: on és la parella respecte del board."""
+    """One Pair subcategory: where the pair sits relative to the board."""
     hole_ranks = {RANK_VALUE[_rank(c)] for c in hole}
     board_ranks_sorted = sorted({RANK_VALUE[_rank(c)] for c in board}, reverse=True)
     paired = [rv for rv in board_ranks_sorted if rv in hole_ranks]
     if not paired:
-        # Parella de butxaca (o sense carta del board emparellada)
+        # Pocket pair (or no board card paired)
         if len(hole_ranks) == 1:
             hv = next(iter(hole_ranks))
             return "OVERPAIR" if hv > board_ranks_sorted[0] else "BOTTOMPAIR"
@@ -108,7 +109,7 @@ def classify_pair_subtype(hole: Tuple[str, str], board: List[str]) -> str:
 
 
 def straight_draw_info(cards: List[str]) -> Tuple[bool, bool]:
-    """Rangs presents -> (OESD, gutshot). Cal que NO hi hagi escala feta."""
+    """Ranks present -> (OESD, gutshot). There must be NO made straight."""
     vals = sorted({RANK_VALUE[_rank(c)] for c in cards})
     has_5_consec = any(vals[i + 4] - vals[i] == 4 for i in range(len(vals) - 4)) if len(vals) >= 5 else False
     if has_5_consec:
@@ -134,13 +135,13 @@ def straight_draw_info(cards: List[str]) -> Tuple[bool, bool]:
 
 
 def is_real_trips(hole: Tuple[str, str], board: List[str]) -> bool:
-    """True si existeix realment un rang amb freqüència >= 3 entre les 5-7 cartes."""
+    """True if a rank actually appears with frequency >= 3 among the 5-7 cards."""
     freq = Counter(_rank(c) for c in list(hole) + list(board))
     return any(v >= 3 for v in freq.values())
 
 
 def analyze_combo(hole: Tuple[str, str], board: List[str]) -> Dict:
-    """Retorna {cat, pair_sub, high_sub, draws:set} per a un combo vàlid."""
+    """Return {cat, pair_sub, high_sub, draws:set} for a valid combo."""
     hc = [Card.new(c) for c in hole]
     bc = [Card.new(c) for c in board]
     full = hc + bc
@@ -149,9 +150,9 @@ def analyze_combo(hole: Tuple[str, str], board: List[str]) -> Dict:
     cat_code = _evaluator.get_rank_class(ev)
     cat = CAT_NAMES[cat_code][0]
 
-    # Correcció de classificació amb subgames (només amb >= 5 cartes):
-    #   * PAIR que realment té 3 cartes del mateix rang -> TRIPS
-    #   * TWOPAIR on un dels parells és realment triple -> TRIPS o FH
+    # Classification correction with card frequencies (only with >= 5 cards):
+    #   * PAIR that actually has 3 cards of the same rank -> TRIPS
+    #   * TWOPAIR where one of the pairs is actually trips -> TRIPS or FH
     if len(full_str) >= 5 and cat == "PAIR" and is_real_trips(hole, board):
         cat = "TRIPS"
     elif len(full_str) >= 5 and cat == "TWOPAIR" and is_real_trips(hole, board):
@@ -174,7 +175,7 @@ def analyze_combo(hole: Tuple[str, str], board: List[str]) -> Dict:
         else:
             high_sub = "OTHER"
 
-    # Projectes: només té sentit en flop/turn i si no hi ha mà feta de 5.
+    # Draws: only meaningful on the flop/turn and if there is no made 5-card hand.
     if len(board) < 5 and cat not in ("SF", "QUADS", "FH", "FLUSH", "STRAIGHT"):
         all_cards = full_str
 
@@ -218,8 +219,8 @@ def analyze_combo(hole: Tuple[str, str], board: List[str]) -> Dict:
 
 def evaluate_range_distribution(range_combos: List[Tuple[str, str]],
                                 board: List[str], street: str = "flop") -> Dict:
-    """Itera tots els combos del rang, exclou duplicats amb el board i calcula
-    la distribució de categories, subparelles, high cards i draws."""
+    """Iterate over every range combo, exclude duplicates with the board and
+    compute the distribution of categories, pair subtypes, high cards and draws."""
     board_set = set(board)
     warnings: List[str] = []
     valid: List[Tuple[str, str]] = []
@@ -264,9 +265,9 @@ def evaluate_range_distribution(range_combos: List[Tuple[str, str]],
                        "combos": pair_counts.get(k, 0), "pct": pct(pair_counts.get(k, 0))}
                       for k in PAIR_SUB_ORDER if pair_counts.get(k, 0) > 0]
     high_breakdown = [
-        {"key": "ACE", "label": "As Alt (Ace High)", "combos": high_counts.get("ACE", 0),
+        {"key": "ACE", "label": "Ace High", "combos": high_counts.get("ACE", 0),
          "pct": pct(high_counts.get("ACE", 0))},
-        {"key": "OTHER", "label": "Alta Carta (altres)", "combos": high_counts.get("OTHER", 0),
+        {"key": "OTHER", "label": "High Card (others)", "combos": high_counts.get("OTHER", 0),
          "pct": pct(high_counts.get("OTHER", 0))},
     ] if cat_counts.get("HIGH", 0) > 0 else []
     draws = [{"key": k, "label": DRAW_NAMES[k], "combos": draw_counts.get(k, 0),
@@ -274,7 +275,7 @@ def evaluate_range_distribution(range_combos: List[Tuple[str, str]],
              for k in DRAW_ORDER if draw_counts.get(k, 0) > 0]
 
     if excluded:
-        warnings.append(f"{excluded} combos exclosos per cartes duplicades amb el board")
+        warnings.append(f"{excluded} combos excluded due to duplicate cards on the board")
 
     return {
         "total_combos_grid": len(range_combos),

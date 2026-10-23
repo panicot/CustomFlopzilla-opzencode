@@ -1,1 +1,1 @@
-# Paquet backend de l'Analitzador de Rangs de Pòquer.
+# Backend package for the Poker Range Analyzer.

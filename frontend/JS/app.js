@@ -1,19 +1,19 @@
 "use strict";
 const RANKS = ["A","K","Q","J","T","9","8","7","6","5","4","3","2"];
 const SUIT_SYMBOL = {h:"♥", d:"♦", c:"♣", s:"♠"};
-const selected = new Set();          // codis de la graella ("AKs","AA"...)
+const selected = new Set();          // grid codes ("AKs","AA"...)
 let street = "flop";
-let board = [null,null,null];        // array de longitud segons carrer
+let board = [null,null,null];        // array whose length depends on the street
 
-/* ---------- Tema clar / fosc ---------- */
+/* ---------- Light / dark theme ---------- */
 const THEME_KEY = "pokerRangeTheme";
 function applyTheme(theme){
   const light = theme === "light";
   document.body.classList.toggle("light", light);
   const btn = document.getElementById("btnTheme");
   if(btn){
-    btn.textContent = light ? "🌙 Tema fosc" : "☀️ Tema clar";
-    const label = light ? "Canvia al tema fosc" : "Canvia al tema clar";
+    btn.textContent = light ? "🌙 Dark theme" : "☀️ Light theme";
+    const label = light ? "Switch to dark theme" : "Switch to light theme";
     btn.title = label;
     btn.setAttribute("aria-label", label);
   }
@@ -30,21 +30,21 @@ document.getElementById("btnTheme").addEventListener("click", ()=>{
   try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
 });
 
-/* ---------- Graella 13x13 ---------- */
-// Ordre original: files I columnes d'A a 2. La diagonal de parelles va de
-// l'as al dos d'esquerra a dreta (AA, KK, QQ, ... 22). Triangle superior =
-// suited, triangle inferior = offsuit.
+/* ---------- 13x13 grid ---------- */
+// Original order: rows and columns from A to 2. The pair diagonal runs from
+// ace to deuce left to right (AA, KK, QQ, ... 22). Upper triangle = suited,
+// lower triangle = offsuit.
 const COL_RANKS = RANKS;
 const ROW_RANKS = RANKS;
 function cellCode(rk, ck){
-  if(rk===ck) return rk+ck;                       // diagonal -> parells
+  if(rk===ck) return rk+ck;                       // diagonal -> pairs
   const iR = ROW_RANKS.indexOf(rk), iC = COL_RANKS.indexOf(ck);
   const pair=[rk,ck];
-  if(RANKS.indexOf(rk) > RANKS.indexOf(ck)) pair.reverse(); // carta alta primer
-  return pair[0]+pair[1]+(iC>iR?"s":"o");         // columna més avall que la fila -> suited
+  if(RANKS.indexOf(rk) > RANKS.indexOf(ck)) pair.reverse(); // high card first
+  return pair[0]+pair[1]+(iC>iR?"s":"o");         // column below the row -> suited
 }
-let isDragging = false;      // s'està arrossegant per la graella?
-let dragSelect = true;       // mode de pintat: true = seleccionar, false = deseleccionar
+let isDragging = false;      // is the user dragging across the grid?
+let dragSelect = true;       // paint mode: true = select, false = deselect
 function applyCell(code, cell, on){
   if(on){
     if(!selected.has(code)){selected.add(code);cell.classList.add("selected");}
@@ -55,18 +55,18 @@ function applyCell(code, cell, on){
 function buildGrid(){
   const g = document.getElementById("rangeGrid");
   g.innerHTML = "";
-  for(const rk of ROW_RANKS){          // files: A..2
-    for(const ck of COL_RANKS){        // columnes: A..2
+  for(const rk of ROW_RANKS){          // rows: A..2
+    for(const ck of COL_RANKS){        // columns: A..2
       const code = cellCode(rk, ck);
       const kind = rk===ck ? "pair" : (code.endsWith("s") ? "suited":"offsuit");
       const cell = document.createElement("div");
       cell.className = `cell ${kind}`;
       cell.textContent = code;
       cell.dataset.code = code;
-      cell.title = code + (kind==="pair"?" (6 combos)":kind==="suited"?" (4 combos suited)":" (12 combos offsuit)");
-      // Clic + arrossegar: el primer clic decideix el mode (seleccionar si la
-      // casella no estava triada, deseleccionar si ja ho estava) i totes les
-      // caselles per on es passa (mantenint el botó premut) reben el mateix estat.
+      cell.title = code + (kind==="pair"?" (6 combos)":kind==="suited"?" (4 suited combos)":" (12 offsuit combos)");
+      // Click + drag: the first click decides the mode (select if the cell was
+      // not selected, deselect if it was) and every cell the pointer passes
+      // over (while the button is held) receives the same state.
       cell.addEventListener("mousedown", e=>{
         e.preventDefault();
         isDragging = true;
@@ -78,8 +78,8 @@ function buildGrid(){
       g.appendChild(cell);
     }
   }
-  // Durant l'arrossegament pintem la casella sota el punter. Usem mousemove a
-  // nivell de graella perquè no es perdi cap casella si el ratolí va ràpid.
+  // While dragging, paint the cell under the pointer. We use mousemove at the
+  // grid level so that no cell is missed when the mouse moves fast.
   g.addEventListener("mousemove", e=>{
     if(!isDragging) return;
     const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -89,28 +89,28 @@ function buildGrid(){
     updateCounter();
   });
 }
-// En aixecar el botó (a qualsevol lloc) s'acaba l'arrossegament.
+// Releasing the button (anywhere) ends the drag.
 document.addEventListener("mouseup", ()=>{
   if(!isDragging) return;
   isDragging = false;
   markPresetInactive();
   updateCounter();
 });
-/* ---------- Presets de rang (seleccions predeterminades) ---------- */
-// Convenció d'expansions amb «+» (idèntica al backend, backend/range_parser.py):
-//   Sense «+» -> només la casella indicada (AKs -> AKs; AK -> AKs i AKo).
-//   AA+   -> tots els parells des d'AA fins TT; 99+ -> 99..22.
-//   Q9o+  -> es manté la carta ALTA i es puja la segona fins just per sota:
+/* ---------- Range presets (default selections) ---------- */
+// "+" expansion convention (identical to the backend, backend/range_parser.py):
+//   No "+" -> only the indicated cell (AKs -> AKs; AK -> AKs and AKo).
+//   AA+   -> all pairs from AA down to TT; 99+ -> 99..22.
+//   Q9o+  -> keep the HIGH card and raise the second card up to just below it:
 //            Q9o, QTo, QJo ; A9s+ -> A9s, ATs, AJs, AQs, AKs ; AKs+ -> AKs.
-// Els presets "Top X %" inclouen parelles + suited + offsuit.
+// The "Top X %" presets include pairs + suited + offsuit.
 const PRESET_DEFAULTS = [
   {id:"top10", name:"Top 10 %", range:"AA+, AKs+, AQs+, AJo+, ATs, KQs+, KJo+"},
   {id:"top15", name:"Top 15 %", range:"AA+, AKs+, AQs+, AJs+, AQo+, ATo+, KQs+, KJo+, KTs+, QJs+, JTs"},
   {id:"top25", name:"Top 25 %", range:"AA+, AKs+, AQs+, AJs+, ATs+, A9s, A8s, A7s, A6s, A5s, A4s, A3s, A2s, AQo+, AJo+, ATo+, KQs+, KJs+, QTs+, JTs+, T9s+, 98s+, 87s+, 76s+, 65s+, 54s, KQo+, KJo+, KTo+, QJo+, JTo+, T9o+"},
-  {id:"pairs", name:"Parelles", range:"AA, KK, QQ, JJ, TT, 99, 88, 77, 66, 55, 44, 33, 22"},
-  {id:"suited", name:"Totes suited", range:"AKs, AQs, AJs, ATs, A9s, A8s, A7s, A6s, A5s, A4s, A3s, A2s, KQs, KJs, KTs, K9s, K8s, K7s, K6s, K5s, K4s, K3s, K2s, QJs, QTs, Q9s, Q8s, Q7s, Q6s, Q5s, Q4s, Q3s, Q2s, JTs, J9s, J8s, J7s, J6s, J5s, J4s, J3s, J2s, T9s, T8s, T7s, T6s, T5s, T4s, T3s, T2s, 98s, 97s, 96s, 95s, 94s, 93s, 92s, 87s, 86s, 85s, 84s, 83s, 82s, 76s, 75s, 74s, 73s, 72s, 65s, 64s, 63s, 62s, 54s, 53s, 52s, 43s, 42s, 32s"},
-  {id:"offsuit", name:"Totes offsuit", range:"AKo, AQo, AJo, ATo, A9o, A8o, A7o, A6o, A5o, A4o, A3o, A2o, KQo, KJo, KTo, K9o, K8o, K7o, K6o, K5o, K4o, K3o, K2o, QJo, QTo, Q9o, Q8o, Q7o, Q6o, Q5o, Q4o, Q3o, Q2o, JTo, J9o, J8o, J7o, J6o, J5o, J4o, J3o, J2o, T9o, T8o, T7o, T6o, T5o, T4o, T3o, T2o, 98o, 97o, 96o, 95o, 94o, 93o, 92o, 87o, 86o, 85o, 84o, 83o, 82o, 76o, 75o, 74o, 73o, 72o, 65o, 64o, 63o, 62o, 54o, 53o, 52o, 43o, 42o, 32o"},
-  {id:"anytwo", name:"Qualsevol dues", range:"+"},
+  {id:"pairs", name:"Pairs", range:"AA, KK, QQ, JJ, TT, 99, 88, 77, 66, 55, 44, 33, 22"},
+  {id:"suited", name:"All suited", range:"AKs, AQs, AJs, ATs, A9s, A8s, A7s, A6s, A5s, A4s, A3s, A2s, KQs, KJs, KTs, K9s, K8s, K7s, K6s, K5s, K4s, K3s, K2s, QJs, QTs, Q9s, Q8s, Q7s, Q6s, Q5s, Q4s, Q3s, Q2s, JTs, J9s, J8s, J7s, J6s, J5s, J4s, J3s, J2s, T9s, T8s, T7s, T6s, T5s, T4s, T3s, T2s, 98s, 97s, 96s, 95s, 94s, 93s, 92s, 87s, 86s, 85s, 84s, 83s, 82s, 76s, 75s, 74s, 73s, 72s, 65s, 64s, 63s, 62s, 54s, 53s, 52s, 43s, 42s, 32s"},
+  {id:"offsuit", name:"All offsuit", range:"AKo, AQo, AJo, ATo, A9o, A8o, A7o, A6o, A5o, A4o, A3o, A2o, KQo, KJo, KTo, K9o, K8o, K7o, K6o, K5o, K4o, K3o, K2o, QJo, QTo, Q9o, Q8o, Q7o, Q6o, Q5o, Q4o, Q3o, Q2o, JTo, J9o, J8o, J7o, J6o, J5o, J4o, J3o, J2o, T9o, T8o, T7o, T6o, T5o, T4o, T3o, T2o, 98o, 97o, 96o, 95o, 94o, 93o, 92o, 87o, 86o, 85o, 84o, 83o, 82o, 76o, 75o, 74o, 73o, 72o, 65o, 64o, 63o, 62o, 54o, 53o, 52o, 43o, 42o, 32o"},
+  {id:"anytwo", name:"Any two", range:"+"},
 ];
 const LS_KEY = "pokerRangePresets_v2";
 let presets = loadPresets();
@@ -129,35 +129,35 @@ function loadPresets(){
 function savePresets(){
   try{localStorage.setItem(LS_KEY, JSON.stringify(presets));}catch(e){}
 }
-// Converteix un token de preset en codis de cel·la ("+" sol = totes les mans)
+// Convert a preset token into cell codes ("+" alone = every hand)
 function presetTokensToCells(tok){
   const raw = String(tok||"").trim();
-  // Si el sufixo «+» va precedit d'un pal (AKs+, QQ+), s'expandeix directament
-  // amb la convenció del backend. Aquesta comprovació s'ha de fer ABANS de
-  // normalitzar/treure espais i abans de qualsevol altre tractament, perquè
-  // els tokens amb «+» intern (ex: "ATs+A2s") segueixen la via dels rangs amb guió.
-  // Nota: els parells amb «+» (QQ+, TT+) també passen per aquí. El regex accepta
-  // el sufixo de pal en minúscula O MAJÚSCULA perquè el token es normalitza a
-  // majúscules abans de comparar-lo (AKs+ -> AKS+: el pal 's' esdevé 'S').
+  // If the "+" suffix follows a suit (AKs+, QQ+), expand it directly with the
+  // backend convention. This check must run BEFORE normalizing/removing spaces
+  // and before any other processing, because tokens with an internal "+"
+  // (e.g. "ATs+A2s") follow the dash-range path.
+  // Note: pairs with "+" (QQ+, TT+) also go through here. The regex accepts the
+  // suit suffix in lowercase OR UPPERCASE because the token is normalized to
+  // uppercase before comparing (AKs+ -> AKS+: the 's' suit becomes 'S').
   const upper = raw.toUpperCase();
   if(/^[AKQJT2-9][AKQJT2-9][so]?\+$/.test(raw) || /^[AKQJT2-9][AKQJT2-9][SO]?\+$/.test(upper)) {
     return expandPlusCells(upper.replace(/\s+/g,"").replace(/([SO])\+$/,(mm,g)=>g.toLowerCase()+"+")) || [];
   }
-  // Normalitza a majúscules però conserva el sufix «s»/«o» en minúscula
-  // (les cel·les de la graella fan servir "AKs", no "AKS").
+  // Normalize to uppercase but keep the "s"/"o" suffix lowercase
+  // (grid cells use "AKs", not "AKS").
   const t = tok.toUpperCase().replace(/\s+/g,"").replace(/([SO])(?=[-+]|$)/g,m=>m.toLowerCase());
   if(t==="+"||t==="ANY"||t==="ANY2"){
     const all=[];
     for(const rk of ROW_RANKS)for(const ck of COL_RANKS)all.push(cellCode(rk,ck));
     return all;
   }
-  // Rangs amb guió: AA-99 (parells), AKs-AJs (suited consecutives), A5s-A2s ...
+  // Dash ranges: AA-99 (pairs), AKs-AJs (consecutive suited), A5s-A2s ...
   const dash=/^([AKQJT2-9]{2})-([AKQJT2-9]{2})(s|o)?$/.exec(t);
   if(dash){
     const hi=dash[1], lo=dash[2];
     let sfx=dash[3]||"";
-    // Si el codi porta sufixos diferents als extrems (ex: A5s-A2s), el tipus
-    // es pren del primer extrem.
+    // If the code has different suffixes at the ends (e.g. A5s-A2s), the type
+    // is taken from the first end.
     if(!sfx){
       const mEnd=/^[AKQJT2-9][so]$/.exec(hi);
       if(mEnd) sfx=mEnd[1];
@@ -169,21 +169,21 @@ function presetTokensToCells(tok){
     const out=[], seen=new Set();
     const add=(a,b,k)=>{const c=a+b+k;if(!seen.has(c)){seen.add(c);out.push(c);}};
     if(sfx===""){
-      // Sense sufixo: parells si els dos extrems ho són (AA-99), o bé totes
-      // les mans no parella dels dos triangles entre els dos extrems (AK-QJ).
+      // No suffix: pairs if both ends are pairs (AA-99), otherwise all
+      // unpaired hands in the rectangles between the two ends (AK-QJ).
       const isPairEnds = (base[0]===base[1]) && (base[2]===base[3]);
       if(isPairEnds){
         for(let a=i1;a<=i2;a++)add(RANKS[a],RANKS[a],"");
       }else{
         for(let a=i1;a<=i2;a++){
           for(let b=a+1;b<RANKS.length;b++){
-            if(b<j2)continue;                    // màxima segona carta = extreme baix
-            if(a>i1 || b>j2){                    // exclou l'extrem per sota del límit
+            if(b<j2)continue;                    // maximum second card = low end
+            if(a>i1 || b>j2){                    // exclude the end below the limit
               add(RANKS[a],RANKS[b],"s"); add(RANKS[a],RANKS[b],"o");
             }
           }
         }
-        // Filtre final: només mans dins del rectangle dels dos extrems indicats
+        // Final filter: only hands inside the rectangle of the two given ends
         const loMin=Math.min(j1,j2), loMax=Math.max(j1,j2);
         return out.filter(c=>{
           const h=RANKS.indexOf(c[0]), l=RANKS.indexOf(c[1]);
@@ -191,12 +191,12 @@ function presetTokensToCells(tok){
         });
       }
     }else{
-      // Amb sufixo (AKs-AJs, A9s-A2s...): la carta alta recorre els extrems i
-      // la baixa va des de T fins al rang del costat baix (convenció estàndard
-      // dels gràfics de rangs). Ex: A5s-A2s -> A5s..A2s; AKs-AJs -> AKs,AQs,AJs.
+      // With a suffix (AKs-AJs, A9s-A2s...): the high card walks through the
+      // ends and the low card goes from T down to the low-side rank (standard
+      // range-chart convention). E.g. A5s-A2s -> A5s..A2s; AKs-AJs -> AKs,AQs,AJs.
       const tIdx=RANKS.indexOf("T");
       const aStart=Math.min(i1,j1), aEnd=Math.max(i1,j1);
-      const bLo=Math.max(j2,tIdx);   // aturada a T si el límit és més alt
+      const bLo=Math.max(j2,tIdx);   // stop at T if the limit is higher
       for(let a=aStart;a<=aEnd;a++){
         for(let b=a+1;b<=bLo;b++)add(RANKS[a],RANKS[b],sfx);
       }
@@ -244,7 +244,7 @@ function markPresetInactive(){
   activePresetId=null;
   renderPresetBar();
 }
-// Preset especial «Neteja»: buida el tauler i deixa el rang sense seleccions.
+// Special "Clear" preset: empties the grid and leaves the range with no selections.
 function clearRangeSelection(){
   clearGridSelection();
   activePresetId=null;
@@ -256,9 +256,9 @@ function renderPresetBar(){
   bar.innerHTML="";
   const clearChip=document.createElement("button");
   clearChip.type="button";
-  clearChip.className="chip neteja"+(selected.size===0?" active":"");
-  clearChip.textContent="Neteja";
-  clearChip.title="Neteja el tauler: deixa el rang sense seleccions";
+  clearChip.className="chip clear"+(selected.size===0?" active":"");
+  clearChip.textContent="Clear";
+  clearChip.title="Clear the grid: leaves the range with no selections";
   clearChip.addEventListener("click",clearRangeSelection);
   bar.appendChild(clearChip);
   for(const p of presets){
@@ -266,12 +266,12 @@ function renderPresetBar(){
     chip.type="button";
     chip.className="chip"+(p.id===activePresetId?" active":"");
     chip.textContent=p.name;
-    chip.title="Substitueix la selecció amb: "+p.range;
+    chip.title="Replace the selection with: "+p.range;
     chip.addEventListener("click",()=>applyPreset(p.id));
     bar.appendChild(chip);
   }
 }
-/* Editor de presets (finestra emergent) */
+/* Preset editor (modal window) */
 function openPresetEditor(){
   const list=document.getElementById("presetList");
   list.innerHTML="";
@@ -280,24 +280,24 @@ function openPresetEditor(){
     item.className="preset-item";
     const head=document.createElement("div");
     head.className="preset-item-head";
-    head.innerHTML=`<b>${escapeHtml(p.name)}</b><span class="badge">${parsePresetRange(p.range).length} cel·les · ${parsePresetRange(p.range).reduce((s,c)=>s+combosForCode(c),0)} combos</span>`;
+    head.innerHTML=`<b>${escapeHtml(p.name)}</b><span class="badge">${parsePresetRange(p.range).length} cells · ${parsePresetRange(p.range).reduce((s,c)=>s+combosForCode(c),0)} combos</span>`;
     const nameInp=document.createElement("input");
-    nameInp.type="text"; nameInp.value=p.name; nameInp.placeholder="Nom del preset";
+    nameInp.type="text"; nameInp.value=p.name; nameInp.placeholder="Preset name";
     const ta=document.createElement("textarea");
-    ta.value=p.range; ta.placeholder="Ex: AA+, Q9o+, A9s+, AKs, QQ ... ('+' sol = qualsevol dues cartes)";
+    ta.value=p.range; ta.placeholder="E.g.: AA+, Q9o+, A9s+, AKs, QQ ... ('+' alone = any two cards)";
     const actions=document.createElement("div");
     actions.className="preset-item-actions";
     const btnUp=document.createElement("button");
-    btnUp.className="secondary"; btnUp.textContent="↑"; btnUp.title="Pujar";
+    btnUp.className="secondary"; btnUp.textContent="↑"; btnUp.title="Move up";
     btnUp.addEventListener("click",()=>{commitEditorValues();if(idx>0){[presets[idx-1],presets[idx]]=[presets[idx],presets[idx-1]];savePresets();openPresetEditor();}});
     const btnDn=document.createElement("button");
-    btnDn.className="secondary"; btnDn.textContent="↓"; btnDn.title="Baixar";
+    btnDn.className="secondary"; btnDn.textContent="↓"; btnDn.title="Move down";
     btnDn.addEventListener("click",()=>{commitEditorValues();if(idx<presets.length-1){[presets[idx+1],presets[idx]]=[presets[idx],presets[idx+1]];savePresets();openPresetEditor();}});
     const btnDel=document.createElement("button");
-    btnDel.className="danger-ghost"; btnDel.textContent="🗑 Eliminar";
+    btnDel.className="danger-ghost"; btnDel.textContent="🗑 Delete";
     btnDel.addEventListener("click",()=>{
       commitEditorValues();
-      if(presets.length<=1){alert("Ha d'haver-hi almenys un preset.");return;}
+      if(presets.length<=1){alert("There must be at least one preset.");return;}
       presets.splice(idx,1); savePresets();
       if(activePresetId===p.id)activePresetId=null;
       renderPresetBar(); openPresetEditor();
@@ -340,7 +340,7 @@ document.getElementById("btnAddPreset").addEventListener("click",()=>{
   savePresets(); openPresetEditor();
 });
 document.getElementById("btnRestorePresets").addEventListener("click",()=>{
-  if(!confirm("Vols restaurar tots els presets als valors per defecte? Es perdran les teves personalitzacions."))return;
+  if(!confirm("Restore all presets to their default values? Your customizations will be lost."))return;
   presets=JSON.parse(JSON.stringify(PRESET_DEFAULTS));
   savePresets(); renderPresetBar(); openPresetEditor();
 });
@@ -361,13 +361,13 @@ document.getElementById("btnClearRange").addEventListener("click",()=>{
   updateCounter();
 });
 
-/* ---------- Expansions de cel·les per a notació amb «+» ---------- */
-// Convenció:
-//   Sense «+» -> només la casella indicada (AKs -> AKs).
-//   Amb «+»:
-//     Parells:   AA+ -> AA..TT ; 99+ -> 99..22
-//     No-parell: es manté la carta ALTA i es puja la segona carta fins just
-//                per sota de l'alta. Ex:  Q9o+ -> Q9o, QTo, QJo
+/* ---------- Cell expansions for "+" notation ---------- */
+// Convention:
+//   No "+" -> only the indicated cell (AKs -> AKs).
+//   With "+":
+//     Pairs:     AA+ -> AA..TT ; 99+ -> 99..22
+//     Non-pair:  keep the HIGH card and raise the second card up to just
+//                below the high card. E.g. Q9o+ -> Q9o, QTo, QJo
 //                                              A9s+ -> A9s, ATs, AJs, AQs, AKs
 //                                              KJo+ -> KJo, KQo
 function expandPlusCells(tok){
@@ -376,10 +376,10 @@ function expandPlusCells(tok){
   const hi=m[1], lo=m[2], suffix=m[3];
   const i1=RANKS.indexOf(hi), i2=RANKS.indexOf(lo);
   if(i1<0||i2<0)return null;
-  // Parells: XX+
+  // Pairs: XX+
   if(suffix===undefined){
     if(hi!==lo)return [];
-    // Parelles: AA+..TT+ s'aturen a TT; 99+ i inferiors baixen fins a 22
+    // Pairs: AA+..TT+ stop at TT; 99+ and below go down to 22
     const tIdx=RANKS.indexOf("T");
     const stop=(i1<=tIdx)?tIdx:RANKS.length-1;
     const out=[];
@@ -387,11 +387,11 @@ function expandPlusCells(tok){
     return out;
   }
   if(hi===lo)return [];
-  // Normalitzem: H = carta alta (índex menor), L = carta baixa (índex major)
+  // Normalize: H = high card (lower index), L = low card (higher index)
   const [H,L]=(i1<i2)?[i1,i2]:[i2,i1];
   const kind=suffix;
   const out=[];
-  // La segona carta puja desde L fins a H+1 (mai igual a la carta alta).
+  // The second card goes up from L to H+1 (never equal to the high card).
   for(let l=L;l>H;l--){
     out.push(RANKS[H]+RANKS[l]+kind);
   }
@@ -420,11 +420,11 @@ function renderSlots(){
     if(c){
       const r=c[0], s=c[1];
       slot.innerHTML=`<span>${r}<span class="suit-${s}">${SUIT_SYMBOL[s]}</span></span><span class="clr">×</span>`;
-      slot.title="Clic per netejar";
+      slot.title="Click to clear";
     }else{
       slot.textContent="+";
       slot.style.color="var(--muted)";
-      slot.title="Clic per triar la carta en una finestra amb les 52 cartes";
+      slot.title="Click to pick the card from a window with all 52 cards";
     }
     slot.addEventListener("click",()=>{
       if(c){board[idx]=null;renderSlots();}
@@ -434,9 +434,9 @@ function renderSlots(){
   });
 }
 
-/* ---------- Modal selector de cartes (52 cartes) ---------- */
-const SUITS = ["h","d","c","s"];           // cors, diamants, trèvols, piques
-let pickerSlotIdx = -1;                     // slot que s'està omplint
+/* ---------- Card picker modal (52 cards) ---------- */
+const SUITS = ["h","d","c","s"];           // hearts, diamonds, clubs, spades
+let pickerSlotIdx = -1;                     // slot currently being filled
 
 function buildCardGrid(){
   const grid=document.getElementById("cardGrid");
@@ -445,7 +445,7 @@ function buildCardGrid(){
     for(const r of RANKS){
       const card=r+s;
       const el=document.createElement("div");
-      el.className=`pcard ${s}${s}`;        // hc / hd / cs / ss -> colors del pal
+      el.className=`pcard ${s}${s}`;        // hc / hd / cs / ss -> suit colors
       el.dataset.card=card;
       el.innerHTML=`<span>${r}</span><span class="psuit">${SUIT_SYMBOL[s]}</span>`;
       el.title=card;
@@ -455,7 +455,7 @@ function buildCardGrid(){
   }
 }
 function refreshCardStates(){
-  // Deshabilita les cartes ja presents al board (altres slots)
+  // Disable cards already present on the board (other slots)
   document.querySelectorAll("#cardGrid .pcard").forEach(el=>{
     const used=board.some((b,i)=>i!==pickerSlotIdx&&b===el.dataset.card);
     el.classList.toggle("disabled",used);
@@ -465,9 +465,9 @@ function openCardPicker(idx){
   pickerSlotIdx=idx;
   buildCardGrid();
   refreshCardStates();
-  document.getElementById("cardModalTitle").textContent=`Tria una carta per al slot ${idx+1}`;
+  document.getElementById("cardModalTitle").textContent=`Pick a card for slot ${idx+1}`;
   document.getElementById("cardModalSub").textContent=
-    "Totes les 52 cartes disponibles. Les ja presents al board apareixen ratllades.";
+    "All 52 cards are available. Cards already on the board appear crossed out.";
   document.getElementById("btnCardClearSlot").style.display=
     board[idx]?"inline-block":"none";
   document.getElementById("cardModal").classList.add("open");
@@ -479,16 +479,16 @@ function closeCardPicker(){
 function pickCard(card){
   if(pickerSlotIdx<0)return;
   if(board.some((b,i)=>i!==pickerSlotIdx&&b===card)){
-    alert("Aquesta carta ja és al board.");return;
+    alert("That card is already on the board.");return;
   }
   board[pickerSlotIdx]=card;
   renderSlots();
-  // Avança automàticament a la següent slot buida si existeix
+  // Automatically advance to the next empty slot if one exists
   const next=board.findIndex(b=>b===null);
   if(next>=0){
     pickerSlotIdx=next;
     buildCardGrid();refreshCardStates();
-    document.getElementById("cardModalTitle").textContent=`Tria una carta per al slot ${next+1}`;
+    document.getElementById("cardModalTitle").textContent=`Pick a card for slot ${next+1}`;
     document.getElementById("btnCardClearSlot").style.display="none";
   }else{
     closeCardPicker();
@@ -501,7 +501,7 @@ document.getElementById("btnCardClearSlot").addEventListener("click",()=>{
   closeCardPicker();
 });
 document.getElementById("cardModal").addEventListener("click",e=>{
-  if(e.target.id==="cardModal")closeCardPicker();   // clic al fons tanca
+  if(e.target.id==="cardModal")closeCardPicker();   // click on the backdrop closes
 });
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"&&document.getElementById("cardModal").classList.contains("open"))closeCardPicker();
@@ -522,12 +522,12 @@ function applyBoardText(){
   const parsed=[];
   for(const t of toks){
     const c=parseCard(t);
-    if(!c){alert(`Carta no vàlida: "${t}"`);return;}
-    if(parsed.includes(c)){alert("Cartes duplicades al board.");return;}
+    if(!c){alert(`Invalid card: "${t}"`);return;}
+    if(parsed.includes(c)){alert("Duplicate cards on the board.");return;}
     parsed.push(c);
   }
   const n=street==="flop"?3:street==="turn"?4:5;
-  if(parsed.length>n){alert(`El carrer ${street} accepta màxim ${n} cartes.`);return;}
+  if(parsed.length>n){alert(`The ${street} street accepts at most ${n} cards.`);return;}
   board=parsed.concat(new Array(n-parsed.length).fill(null));
   renderSlots();
 }
@@ -538,7 +538,7 @@ document.getElementById("btnClearBoard").addEventListener("click",()=>{
   renderSlots();
 });
 
-/* ---------- Anàlisi ---------- */
+/* ---------- Analysis ---------- */
 async function analyze(){
   const body={
     range_codes:[...selected],
@@ -548,7 +548,7 @@ async function analyze(){
   const res=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   const out=document.getElementById("resultsBody");
   if(!res.ok){
-    const err=await res.json().catch(()=>({detail:"Error desconegut"}));
+    const err=await res.json().catch(()=>({detail:"Unknown error"}));
     out.innerHTML=`<div class="error">⛔ ${escapeHtml(err.detail||("HTTP "+res.status))}</div>`;
     return;
   }
@@ -559,7 +559,7 @@ document.getElementById("btnAnalyze").addEventListener("click",analyze);
 function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
 function rowsHTML(list,barClass){
-  if(!list.length)return `<tr><td colspan="3" style="color:var(--muted)">Cap combo en aquesta secció.</td></tr>`;
+  if(!list.length)return `<tr><td colspan="3" style="color:var(--muted)">No combos in this section.</td></tr>`;
   return list.map(r=>`
     <tr>
       <td>${escapeHtml(r.label)}</td>
@@ -574,23 +574,23 @@ function renderResults(d){
   let html="";
   if(d.warnings.length) html+=d.warnings.map(w=>`<div class="warn">⚠️ ${escapeHtml(w)}</div>`).join("");
   html+=`<div class="stats-row">
-    <div class="stat"><b>${d.total_combos_grid}</b><span>Combos al rang</span></div>
-    <div class="stat"><b style="color:var(--danger)">${d.excluded_dupes}</b><span>Exclosos (dup board)</span></div>
-    <div class="stat"><b style="color:var(--success)">${d.valid_combos}</b><span>Combos vàlids</span></div>
+    <div class="stat"><b>${d.total_combos_grid}</b><span>Combos in range</span></div>
+    <div class="stat"><b style="color:var(--danger)">${d.excluded_dupes}</b><span>Excluded (board dupes)</span></div>
+    <div class="stat"><b style="color:var(--success)">${d.valid_combos}</b><span>Valid combos</span></div>
     <div class="stat"><b>${cards||"—"}</b><span>Board (${escapeHtml(d.street)})</span></div>
   </div>`;
-  html+=`<div class="section-title">Distribució per tipus de mà</div>
-  <table><thead><tr><th>Categoria</th><th style="text-align:right">Combos</th><th style="text-align:right">% Rang</th><th>Freqüència</th></tr></thead><tbody>${rowsHTML(d.categories,"")}</tbody></table>`;
+  html+=`<div class="section-title">Distribution by hand type</div>
+  <table><thead><tr><th>Category</th><th style="text-align:right">Combos</th><th style="text-align:right">% Range</th><th>Frequency</th></tr></thead><tbody>${rowsHTML(d.categories,"")}</tbody></table>`;
   if(d.pair_breakdown.length){
-    html+=`<div class="section-title">Desglossament One Pair</div>
+    html+=`<div class="section-title">One Pair breakdown</div>
     <table><tbody>${rowsHTML(d.pair_breakdown,"pairsub")}</tbody></table>`;
   }
   if(d.high_card_breakdown.length){
-    html+=`<div class="section-title">Desglossament High Card</div>
+    html+=`<div class="section-title">High Card breakdown</div>
     <table><tbody>${rowsHTML(d.high_card_breakdown,"pairsub")}</tbody></table>`;
   }
   if(d.draws.length){
-    html+=`<div class="section-title">Projectes (Draws)</div>
+    html+=`<div class="section-title">Draws</div>
     <table><tbody>${rowsHTML(d.draws,"draw")}</tbody></table>`;
   }
   document.getElementById("resultsBody").innerHTML=html;
